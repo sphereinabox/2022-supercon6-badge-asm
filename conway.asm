@@ -9,9 +9,9 @@
 ;;; 0x6-0xE: conway counters
 ;;; 0xF: flags
 ;;; registers:
+;;; R8: "free"
+;;; R9: currently displayed page 0x4 or 0x2 (xor with 0b0110 to get the other)
 ;;; R9 next page to display
-;;; R8 previous page
-;;; display pages toggle between 0x2 and 0x4
 init:
   ;; 0b1010 to turn off ALU display
   ;; 0b0010 to just relocate IN/OUT to last page
@@ -26,7 +26,6 @@ init:
 
   ;; page
   mov R9,0x2                   ;next page to draw
-  mov R8,0x4
 
   ;; fill page at R9 with random
   mov R1,R9
@@ -49,8 +48,10 @@ fill1:
   skip c,2
   goto fill1
 
-  ;; fill page at R8 with random
-  mov R1,R8
+  ;; fill page not at R9 with random
+  mov R0,R9
+  xor R0,0b0110
+  mov R1,R0
   mov R2,0
 fill2:
   mov r0,0
@@ -59,7 +60,7 @@ fill2:
   inc r2
   skip c,2
   goto fill2
-  ;; fill page at R8+1 with random
+  ;; fill page not at R9+1 with random
   inc R1
   mov R2,0
 fill3:
@@ -92,14 +93,18 @@ zero_neighbor_page_loop:
   goto zero_neighbor_page_loop
 
   ;; active bit
-  mov R7,R8                     ; source page (bits) 0x2 or 0x4
+  ;; R7:R6 stores previous bits
+  mov r0,R9                     ; find previous page
+  xor r0,0b0110
+  mov r7,r0
   mov R6,0                      ; in-page addr
+  ;; R4:R3 stores count of living neighbors
   mov r4,0x6
 inc_neighbor_page_loop:
   mov r3,0x0
   mov r0,[R7:R6]
   mov r5,r0
-  ;; todo: unroll 4x
+  ;; unrolled 4x
   rrc r5
   skip nc,2
   gosub do_increment
@@ -120,7 +125,7 @@ inc_neighbor_page_loop:
   inc r7
   mov r0,[R7:R6]
   mov r5,r0
-  ;; todo: copy unrolled 4x
+  ;; unrolled 4x
   rrc r5
   skip nc,2
   gosub do_increment
@@ -145,14 +150,11 @@ inc_neighbor_page_loop:
   skip c,2
   goto inc_neighbor_page_loop
 
-  ;; now we've computed neighbor counts
-  ;; todo: compute alive/dead state
-
 
   ;; swap R8/R9 registers
   mov r0,R9
-  mov R9,R8
-  mov R8,r0
+  xor r0,0b0110
+  mov r9,r0
 
   ;; update page display
   mov R0,R9
@@ -221,3 +223,8 @@ east:
   mov r4,r0
   ret R0,0
 
+do_conway:
+  ;; set carry flag based on:
+  ;;  - existing carry flag (c: alive, nc: dead)
+  ;;  - R2 number of neighbors
+  ret R0,0
