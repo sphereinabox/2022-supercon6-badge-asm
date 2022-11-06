@@ -1,13 +1,14 @@
 ;;; conway's game of life
 ;;; memory:
 ;;; 0x0: registers
-;;; 0x1: available
+;;; 0x10-0x1E: stack (I think only 2 levels used)
+;;; 0x1F "stuck" counter
 ;;; 0x2: fb0-a
 ;;; 0x3; fb0-b
 ;;; 0x4: fb1-a
 ;;; 0x5: fb2-b
 ;;; 0x6-0xE: conway counters
-;;; 0xF: flags
+;;; 0xF: special function registers
 ;;; registers:
 ;;; r8: "free"
 ;;; r9: currently displayed page 0x4 or 0x2 (xor with 0b0110 to get the other)
@@ -77,6 +78,9 @@ fill3:
   goto fill3
 
 afterfill:
+  ;; zero "stuck" counter
+  mov r0,0
+  mov [0x1F],r0
   ;; page
   mov r9,0x4                  ;next page to draw
   ;; set display page to r9
@@ -261,16 +265,11 @@ conway_page_loop:
   skip NZ,1                     ;
   jr -4                         ; loop
 
-  ;; no changes? fillrandom
-  bit r2,0
-  skip nz,2
-  goto fillrandom
-
   ;; test keypresses
   mov r0,[0xFC]
   bit r0,0                      ;new keypress will set z to nz
   skip nz,2
-  goto loop
+  goto no_buttons_pressed
   mov r0,[0xFD]                 ;load number of keypress
   cp r0,1                       ; leftmost opcode button
   skip nz,2
@@ -280,11 +279,24 @@ conway_page_loop:
   goto fastersync
   cp r0,3                       ; '2' opcode/sync button
   skip nz,2
+  goto slowersync
   cp r0,4                       ; '1' opcode/sync button
   skip nz,2
   goto initglider
 
-  goto slowersync
+no_buttons_pressed:
+  ;; r2 is zero when no changes were made
+  bit r2,0
+  skip z,2
+  goto loop
+
+  ;; increment stuck counter 0x1F
+  mov r0,[0x1F]
+  inc r0
+  mov [0x1F],R0
+  ;; when counter overflows, fill random
+  skip nc,2
+  goto fillrandom
 
   goto loop
 
