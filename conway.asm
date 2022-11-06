@@ -161,6 +161,7 @@ inc_neighbor_page_loop:
   goto inc_neighbor_page_loop
 
   ;; conway loop
+  mov r2,0x0                    ; flag set to 1 when we change bits
   ;; r7:r6 stores previous bits
   mov r0,r9                     ; find previous page
   xor r0,0b0110
@@ -193,8 +194,13 @@ conway_page_loop:
   mov r0,r7
   xor r0,0b0110
   mov r7,r0
+  mov r0,[r7:r6]                ; load old bits to r5
+  mov r5,r0
   mov r0,r8
   mov [r7:r6],r0
+  sub r0,r5                     ; compare old/new bits
+  skip z,1
+  mov r2,1                      ; bits changed
   mov r0,r7
   xor r0,0b0110
   mov r7,r0
@@ -223,8 +229,13 @@ conway_page_loop:
   mov r0,r7
   xor r0,0b0110
   mov r7,r0
+  mov r0,[r7:r6]                ; load old bits to r5
+  mov r5,r0
   mov r0,r8
   mov [r7:r6],r0
+  sub r0,r5                     ; compare old/new bits
+  skip z,1
+  mov r2,1                      ; bits changed
   mov r0,r7
   xor r0,0b0110
   mov r7,r0
@@ -249,6 +260,11 @@ conway_page_loop:
   bit r0,0                      ; test user sync bit
   skip NZ,1                     ;
   jr -4                         ; loop
+
+  ;; no changes? fillrandom
+  bit r2,0
+  skip nz,2
+  goto fillrandom
 
   ;; test keypresses
   mov r0,[0xFC]
