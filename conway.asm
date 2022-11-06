@@ -283,6 +283,9 @@ conway_page_loop:
   cp r0,4                       ; '1' opcode/sync button
   skip nz,2
   goto initglider
+  cp r0,5                       ; '8' X/clock button
+  skip nz,2
+  goto init_r_pentomino
 
 no_buttons_pressed:
   ;; r2 is zero when no changes were made
@@ -423,11 +426,48 @@ fillgliderzero2:
   inc r2
   skip c,2
   goto fillgliderzero2
+
   ;; add glider
+  mov r2,0x6
   mov r0,0b0111
   mov [r1:r2],r0
   inc r2
   mov r0,0b0001
+  mov [r1:r2],r0
+  inc r2
+  mov r0,0b0010
+  mov [r1:r2],r0
+
+goto afterfill
+
+init_r_pentomino:
+  ;; page
+  mov r9,0x4                  ;next page to draw
+  mov r0,r9
+  xor r0,0b0110
+  mov r1,r0
+  mov r2,0
+  mov r0,0
+  ;; loop: fill first page
+  mov [r1:r2], r0
+  inc r2
+  skip c,1
+  jr -4
+
+  inc r1
+  mov r2,0
+  ;; loop: fill second page
+  mov [r1:r2], r0
+  inc r2
+  skip c,1
+  jr -4
+
+  ;; add r-pentomino
+  mov r2,0x6
+  mov r0,0b0011
+  mov [r1:r2],r0
+  inc r2
+  mov r0,0b0110
   mov [r1:r2],r0
   inc r2
   mov r0,0b0010
