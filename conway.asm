@@ -24,6 +24,7 @@ init:
   mov r0,0b0001                 ; low bit starts sync
   mov [0xFC], r0                ; KeyStatus bit zero is handshaking bit for sync
 
+fillrandom:
   ;; page
   mov r9,0x4                  ;next page to draw
 
@@ -75,6 +76,9 @@ fill3:
   skip c,2
   goto fill3
 
+afterfill:
+  ;; page
+  mov r9,0x4                  ;next page to draw
   ;; set display page to r9
   mov r0,r9
   mov [0xF0],r0
@@ -245,6 +249,43 @@ conway_page_loop:
   bit r0,0                      ; test user sync bit
   skip NZ,1                     ;
   jr -4                         ; loop
+
+  ;; test keypresses
+  mov r0,[0xFC]
+  bit r0,0                      ;new keypress will set z to nz
+  skip nz,2
+  goto loop
+  mov r0,[0xFD]                 ;load number of keypress
+  cp r0,1                       ; leftmost opcode button
+  skip nz,2
+  goto fillrandom               ; new pattern
+  cp r0,2                       ; '4' opcode/sync button
+  skip nz,2
+  goto fastersync
+  cp r0,3                       ; '2' opcode/sync button
+  skip nz,2
+  cp r0,4                       ; '1' opcode/sync button
+  skip nz,2
+  goto initglider
+
+  goto slowersync
+
+  goto loop
+
+slowersync:
+  mov r0,[0xF2]
+  cp r0,0x0
+  skip z,1
+  dec r0
+  mov [0xF2],R0
+  goto loop
+
+fastersync:
+  mov r0,[0xF2]
+  cp r0,0xF
+  skip z,1
+  inc r0
+  mov [0xF2],R0
   goto loop
 
 ;;; increment counters at 8 addresses centered at [r4:r3]
@@ -333,3 +374,35 @@ do_conway:
   skip nz,1
   ret r0,1
   ret r0,0
+
+initglider:
+  ;; page
+  mov r9,0x4                  ;next page to draw
+  mov r0,r9
+  xor r0,0b0110
+  mov r1,r0
+  mov r2,0
+  mov r0,0
+fillgliderzero:
+  mov [r1:r2], r0
+  inc r2
+  skip c,2
+  goto fillgliderzero
+  inc r1
+  mov r2,0
+fillgliderzero2:
+  mov [r1:r2], r0
+  inc r2
+  skip c,2
+  goto fillgliderzero2
+  ;; add glider
+  mov r0,0b0111
+  mov [r1:r2],r0
+  inc r2
+  mov r0,0b0001
+  mov [r1:r2],r0
+  inc r2
+  mov r0,0b0010
+  mov [r1:r2],r0
+
+goto afterfill
