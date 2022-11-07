@@ -1,4 +1,13 @@
-;;; conway's game of life
+;;; Conway's game of life
+;;; Nick Winters (sphereinabox) 2022
+;;;
+;;; Buttons:
+;;;  - opcode 8: reset to random
+;;;  - opcode 4: slower delay before next step
+;;;  - opcode 2: faster
+;;;  - opcode 1: reset to glider
+;;;  - operand x 8: reset to r-pentomino
+;;;
 ;;; memory:
 ;;; 0x0: registers
 ;;; 0x10-0x1E: stack (I think only 2 levels used)
@@ -9,10 +18,24 @@
 ;;; 0x5: fb2-b
 ;;; 0x6-0xE: conway counters
 ;;; 0xF: special function registers
+;;;
 ;;; registers:
-;;; r8: "free"
+;;; r0: various temporary uses
+;;; r2: only used for "stuck/blinker" check flag
+;;; r3 address high of neighbor count in memory
+;;; r4 address low of neighbor count in memory
+;;; r5 "current" bits in "conway" loop
+;;; r6 low destination address for output display
+;;; r7 high destination address for output display
+;;; r8: only used to accumulate output bits in "conway" loop
 ;;; r9: currently displayed page 0x4 or 0x2 (xor with 0b0110 to get the other)
 ;;; r9 next page to display
+;;;
+;;; implementation notes:
+;;;  - the display toggles between two pages: 4 and 6.
+;;;  - the count of neighbors are made in memory, on pages 0xF-0xD
+;;;  - to detect stuck just blinkers I check for changes with 2-generations ago. I reset after 16 more generations.
+;;;
 init:
   ;; 0b1010 to turn off ALU display
   ;; 0b0010 to just relocate IN/OUT to last page
